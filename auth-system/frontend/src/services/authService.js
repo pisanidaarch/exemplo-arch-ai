@@ -1,4 +1,4 @@
-// authService.js- Serviço para gerenciar a autenticação
+// auth-system/frontend/src/services/authService.js - Serviço para gerenciar a autenticação
 
 class AuthService {
   constructor() {
@@ -15,6 +15,26 @@ class AuthService {
    */
   async login(username, password) {
     try {
+      // Para a versão de demonstração, simulamos o comportamento da API
+      if (process.env.NODE_ENV === 'development' && process.env.REACT_APP_MOCK_API === 'true') {
+        // Simulação para desenvolvimento
+        return new Promise((resolve, reject) => {
+          setTimeout(() => {
+            if (username === 'error@example.com') {
+              reject(new Error('Usuário ou senha inválidos'));
+            } else if (username === 'mfa@example.com') {
+              resolve({ requireMfa: true, message: 'Código de verificação enviado' });
+            } else {
+              resolve({
+                token: "eyJhbGciOiJIUzI1NiIsIn...",
+                refresh_token: "dQw4w9WgXcQ..."
+              });
+            }
+          }, 1000);
+        });
+      }
+
+      // Implementação real para produção
       const response = await fetch(`${this.apiUrl}/api/auth/login`, {
         method: 'POST',
         headers: {
@@ -44,6 +64,23 @@ class AuthService {
    */
   async verifyMfa(code) {
     try {
+      // Para a versão de demonstração
+      if (process.env.NODE_ENV === 'development' && process.env.REACT_APP_MOCK_API === 'true') {
+        return new Promise((resolve, reject) => {
+          setTimeout(() => {
+            if (code === '123456') {
+              resolve({
+                token: "eyJhbGciOiJIUzI1NiIsIn...",
+                refresh_token: "dQw4w9WgXcQ..."
+              });
+            } else {
+              reject(new Error('Código MFA inválido'));
+            }
+          }, 1000);
+        });
+      }
+
+      // Implementação real
       const response = await fetch(`${this.apiUrl}/api/auth/mfa/verify`, {
         method: 'POST',
         headers: {
@@ -206,4 +243,5 @@ class AuthService {
   }
 }
 
+// Exportar uma instância única do serviço
 export default new AuthService();

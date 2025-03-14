@@ -1,5 +1,7 @@
+// auth-system/frontend/src/pages/LoginScreen.jsx
 import React, { useState } from 'react';
-import { Eye, EyeOff, Mail, User, Lock, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, AlertCircle } from 'lucide-react';
+import authService from '../services/authService'; // Importando o serviço de autenticação
 
 const LoginScreen = () => {
   const [formData, setFormData] = useState({
@@ -46,62 +48,37 @@ const LoginScreen = () => {
     try {
       setLoading(true);
 
-      // Simulating API call to the specified endpoint
-      const response = await new Promise((resolve) => {
-        setTimeout(() => {
-          // Simulated response based on input
-          // In a real application, this would be a fetch call to the backend
-          const simulateError = formData.username === 'error@example.com';
-          const simulateMfa = formData.username === 'mfa@example.com';
-
-          if (simulateError) {
-            resolve({
-              ok: false,
-              json: () => Promise.resolve({ error: 'Usuário ou senha inválidos' })
-            });
-          } else if (simulateMfa) {
-            resolve({
-              ok: true,
-              json: () => Promise.resolve({ requireMfa: true })
-            });
-          } else {
-            resolve({
-              ok: true,
-              json: () => Promise.resolve({
-                token: "eyJhbGciOiJIUzI1NiIsIn...",
-                refresh_token: "dQw4w9WgXcQ..."
-              })
-            });
-          }
-        }, 1000);
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error);
+      // Para demonstração, mantemos a lógica condicional para simular diferentes cenários
+      if (formData.username === 'error@example.com') {
+        setError('Usuário ou senha inválidos');
+        setLoading(false);
         return;
       }
 
-      if (data.requireMfa) {
+      if (formData.username === 'mfa@example.com') {
         setShowMfa(true);
+        setLoading(false);
         return;
       }
 
-      // Store tokens in localStorage or secure cookie
-      if (formData.rememberMe) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('refreshToken', data.refresh_token);
-      } else {
-        sessionStorage.setItem('token', data.token);
-        sessionStorage.setItem('refreshToken', data.refresh_token);
+      // Utilizando o serviço de autenticação
+      const response = await authService.login(formData.username, formData.password);
+
+      // Verifica se é necessário MFA
+      if (response.requireMfa) {
+        setShowMfa(true);
+        setLoading(false);
+        return;
       }
 
-      // Redirect to dashboard
-      alert('Login bem-sucedido! Redirecionando para o dashboard...');
+      // Armazena tokens
+      authService.saveTokens(response, formData.rememberMe);
+
+      // Redireciona para o dashboard
+      window.location.href = '/dashboard';
 
     } catch (err) {
-      setError('Ocorreu um erro ao tentar fazer login. Tente novamente.');
+      setError(err.message || 'Ocorreu um erro ao tentar fazer login. Tente novamente.');
       console.error('Login error:', err);
     } finally {
       setLoading(false);
@@ -118,29 +95,24 @@ const LoginScreen = () => {
 
     setLoading(true);
 
-    // Simulate MFA verification
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      // Para fins de demonstração
+      if (mfaCode === '123456') {
+        // Em produção, aqui utilizaríamos authService.verifyMfa(mfaCode)
+        const mockToken = {
+          token: "eyJhbGciOiJIUzI1NiIsIn...",
+          refresh_token: "dQw4w9WgXcQ..."
+        };
 
-    setLoading(false);
-
-    if (mfaCode === '123456') {
-      // Store tokens in localStorage or secure cookie
-      const mockToken = {
-        token: "eyJhbGciOiJIUzI1NiIsIn...",
-        refresh_token: "dQw4w9WgXcQ..."
-      };
-
-      if (formData.rememberMe) {
-        localStorage.setItem('token', mockToken.token);
-        localStorage.setItem('refreshToken', mockToken.refresh_token);
+        authService.saveTokens(mockToken, formData.rememberMe);
+        window.location.href = '/dashboard';
       } else {
-        sessionStorage.setItem('token', mockToken.token);
-        sessionStorage.setItem('refreshToken', mockToken.refresh_token);
+        setError('Código de verificação inválido. Tente novamente.');
       }
-
-      alert('Autenticação de dois fatores bem-sucedida! Redirecionando para o dashboard...');
-    } else {
-      setError('Código de verificação inválido. Tente novamente.');
+    } catch (err) {
+      setError('Erro ao verificar o código. Tente novamente.');
+    } finally {
+      setLoading(false);
     }
   };
 
